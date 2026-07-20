@@ -55,13 +55,12 @@ func main() {
 	}()
 
 	quotedArgShouldEscapeTable := func() [256]byte {
-		// According to RFC 3986 §2.3
+
 		var a [256]byte
 		for i := 0; i < 256; i++ {
 			a[i] = 1
 		}
 
-		// ALPHA
 		for i := int('a'); i <= int('z'); i++ {
 			a[i] = 0
 		}
@@ -69,12 +68,10 @@ func main() {
 			a[i] = 0
 		}
 
-		// DIGIT
 		for i := int('0'); i <= int('9'); i++ {
 			a[i] = 0
 		}
 
-		// Unreserved characters
 		for _, v := range `-_.~` {
 			a[v] = 0
 		}
@@ -83,12 +80,7 @@ func main() {
 	}()
 
 	quotedPathShouldEscapeTable := func() [256]byte {
-		// The implementation here equal to net/url shouldEscape(s, encodePath)
-		//
-		// The RFC allows : @ & = + $ but saves / ; , for assigning
-		// meaning to individual path segments. This package
-		// only manipulates the path as a whole, so we allow those
-		// last three as well. That leaves only ? to escape.
+
 		a := quotedArgShouldEscapeTable
 
 		for _, v := range `$&+,/:;=@` {
@@ -99,14 +91,7 @@ func main() {
 	}()
 
 	validHeaderFieldByteTable := func() [128]byte {
-		// Should match net/textproto's validHeaderFieldByte(c byte) bool
-		// Defined by RFC 7230 and 9110:
-		//
-		//	header-field   = field-name ":" OWS field-value OWS
-		//	field-name     = token
-		//	tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
-		//	        "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
-		//	token = 1*tchar
+
 		var table [128]byte
 		for c := 0; c < 128; c++ {
 			if (c >= '0' && c <= '9') ||
@@ -122,24 +107,13 @@ func main() {
 	}()
 
 	validHeaderValueByteTable := func() [256]byte {
-		// Should match net/textproto's validHeaderValueByte(c byte) bool
-		// Defined by RFC 7230 and 9110:
-		//
-		//	field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
-		//	field-vchar    = VCHAR / obs-text
-		//	obs-text       = %x80-FF
-		//
-		// RFC 5234:
-		//
-		//	HTAB           =  %x09
-		//	SP             =  %x20
-		//	VCHAR          =  %x21-7E
+
 		var table [256]byte
 		for c := 0; c < 256; c++ {
-			if (c >= 0x21 && c <= 0x7E) || // VCHAR
-				c == 0x20 || // SP
-				c == 0x09 || // HTAB
-				c >= 0x80 { // obs-text
+			if (c >= 0x21 && c <= 0x7E) ||
+				c == 0x20 ||
+				c == 0x09 ||
+				c >= 0x80 {
 				table[c] = 1
 			}
 		}
@@ -147,21 +121,7 @@ func main() {
 	}()
 
 	validMethodValueByteTable := [256]byte{
-		/*
-				Same as net/http
 
-			     Method         = "OPTIONS"                ; Section 9.2
-			                    | "GET"                    ; Section 9.3
-			                    | "HEAD"                   ; Section 9.4
-			                    | "POST"                   ; Section 9.5
-			                    | "PUT"                    ; Section 9.6
-			                    | "DELETE"                 ; Section 9.7
-			                    | "TRACE"                  ; Section 9.8
-			                    | "CONNECT"                ; Section 9.9
-			                    | extension-method
-			   extension-method = token
-			     token          = 1*<any CHAR except CTLs or separators>
-		*/
 		'!':  1,
 		'#':  1,
 		'$':  1,

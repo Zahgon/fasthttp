@@ -82,7 +82,7 @@ const (
 	HeaderRetryAfter                      = "Retry-After"
 	HeaderSaveData                        = "Save-Data"
 	HeaderSecWebSocketAccept              = "Sec-WebSocket-Accept"
-	HeaderSecWebSocketExtensions          = "Sec-WebSocket-Extensions" // #nosec G101
+	HeaderSecWebSocketExtensions          = "Sec-WebSocket-Extensions"
 	HeaderSecWebSocketKey                 = "Sec-WebSocket-Key"
 	HeaderSecWebSocketProtocol            = "Sec-WebSocket-Protocol"
 	HeaderSecWebSocketVersion             = "Sec-WebSocket-Version"

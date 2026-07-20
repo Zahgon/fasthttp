@@ -10,17 +10,7 @@ var domains = make(map[string]fasthttp.RequestHandler)
 
 func main() {
 	server := &fasthttp.Server{
-		// You can check the access using openssl command:
-		// $ openssl s_client -connect localhost:8080 << EOF
-		// > GET /
-		// > Host: localhost
-		// > EOF
-		//
-		// $ openssl s_client -connect localhost:8080 << EOF
-		// > GET /
-		// > Host: 127.0.0.1:8080
-		// > EOF
-		//
+
 		Handler: func(ctx *fasthttp.RequestCtx) {
 			h, ok := domains[string(ctx.Host())]
 			if !ok {
@@ -31,7 +21,6 @@ func main() {
 		},
 	}
 
-	// preparing first host
 	cert, priv, err := fasthttp.GenerateTestCertificate("localhost:8080")
 	if err != nil {
 		panic(err)
@@ -45,7 +34,6 @@ func main() {
 		panic(err)
 	}
 
-	// preparing second host
 	cert, priv, err = fasthttp.GenerateTestCertificate("127.0.0.1")
 	if err != nil {
 		panic(err)

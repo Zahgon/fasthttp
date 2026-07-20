@@ -9,14 +9,12 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-func requestHandler(ctx *fasthttp.RequestCtx) {
-	ctx.SetBodyString("hello from https!")
-}
+func requestHandler(ctx *fasthttp.RequestCtx) { _ = "STUB: not implemented"; return }
 
 func main() {
 	m := &autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist("example.com"), // Replace with your domain.
+		HostPolicy: autocert.HostWhitelist("example.com"),
 		Cache:      autocert.DirCache("./certs"),
 	}
 
@@ -27,8 +25,7 @@ func main() {
 		},
 	}
 
-	// Let's Encrypt tls-alpn-01 only works on port 443.
-	ln, err := net.Listen("tcp4", "0.0.0.0:443") // #nosec G102
+	ln, err := net.Listen("tcp4", "0.0.0.0:443")
 	if err != nil {
 		panic(err)
 	}

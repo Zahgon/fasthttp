@@ -2,11 +2,4 @@
 
 package fasthttp
 
-func addLeadingSlash(dst, src []byte) []byte {
-	// add leading slash for unix paths
-	if len(src) == 0 || src[0] != '/' {
-		dst = append(dst, '/')
-	}
-
-	return dst
-}
+func addLeadingSlash(dst, src []byte) []byte { _ = "STUB: not implemented"; return nil }
