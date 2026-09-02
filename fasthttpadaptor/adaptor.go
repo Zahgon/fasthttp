@@ -1,10 +1,7 @@
-// Package fasthttpadaptor provides helper functions for converting net/http
-// request handlers to fasthttp request handlers.
 package fasthttpadaptor
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -14,174 +11,17 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// NewFastHTTPHandlerFunc wraps net/http handler func to fasthttp
-// request handler, so it can be passed to fasthttp server.
-//
-// While this function may be used for easy switching from net/http to fasthttp,
-// it has the following drawbacks comparing to using manually written fasthttp
-// request handler:
-//
-//   - A lot of useful functionality provided by fasthttp is missing
-//     from net/http handler.
-//   - net/http -> fasthttp handler conversion has some overhead,
-//     so the returned handler will be always slower than manually written
-//     fasthttp handler.
-//
-// So it is advisable using this function only for quick net/http -> fasthttp
-// switching. Then manually convert net/http handlers to fasthttp handlers
-// according to https://github.com/valyala/fasthttp#switching-from-nethttp-to-fasthttp .
 func NewFastHTTPHandlerFunc(h http.HandlerFunc) fasthttp.RequestHandler {
-	return NewFastHTTPHandler(h)
+	_ = "STUB: not implemented"
+	return *new(fasthttp.RequestHandler)
 }
 
-// NewFastHTTPHandler wraps net/http handler to fasthttp request handler,
-// so it can be passed to fasthttp server.
-//
-// While this function may be used for easy switching from net/http to fasthttp,
-// it has the following drawbacks comparing to using manually written fasthttp
-// request handler:
-//
-//   - A lot of useful functionality provided by fasthttp is missing
-//     from net/http handler.
-//   - net/http -> fasthttp handler conversion has some overhead,
-//     so the returned handler will be always slower than manually written
-//     fasthttp handler.
-//
-// So it is advisable using this function only for quick net/http -> fasthttp
-// switching. Then manually convert net/http handlers to fasthttp handlers
-// according to https://github.com/valyala/fasthttp#switching-from-nethttp-to-fasthttp .
 func NewFastHTTPHandler(h http.Handler) fasthttp.RequestHandler {
-	return func(ctx *fasthttp.RequestCtx) {
-		var r http.Request
-		if err := ConvertRequest(ctx, &r, true); err != nil {
-			ctx.Logger().Printf("cannot parse requestURI %q: %v", r.RequestURI, err)
-			ctx.Error("Internal Server Error", fasthttp.StatusInternalServerError)
-			return
-		}
-
-		w := acquireWriter(ctx)
-		// Serve the net/http handler concurrently so we can react to Flush/Hijack.
-		go func() {
-			defer func() {
-				if rec := recover(); rec != nil {
-					ctx.Logger().Printf("panic in net/http handler: %v", rec)
-
-					select {
-					case w.modeCh <- modePanicked:
-					default:
-					}
-				} else {
-					// Signal completion if no other mode was selected yet.
-					select {
-					case w.modeCh <- modeDone:
-					default:
-					}
-				}
-
-				_ = w.Close()
-			}()
-
-			h.ServeHTTP(w, r.WithContext(ctx))
-		}()
-
-		// Decide mode by first event.
-		switch <-w.modeCh {
-		case modeDone:
-			// Buffered, no Flush() nor Hijack().
-			ctx.SetStatusCode(w.status())
-			haveContentType := false
-			for k, vv := range w.Header() {
-				if k == fasthttp.HeaderContentType {
-					haveContentType = true
-				}
-
-				for _, v := range vv {
-					ctx.Response.Header.Add(k, v)
-				}
-			}
-
-			if !haveContentType {
-				// From net/http.ResponseWriter.Write:
-				// If the Header does not contain a Content-Type line, Write adds a Content-Type set
-				// to the result of passing the initial 512 bytes of written data to DetectContentType.
-				l := min(len(w.responseBody), 512)
-				if l > 0 {
-					ctx.Response.Header.Set(fasthttp.HeaderContentType, http.DetectContentType(w.responseBody[:l]))
-				}
-			}
-			if len(w.responseBody) > 0 {
-				ctx.Response.SetBody(w.responseBody)
-			}
-			releaseWriter(w)
-
-		case modeFlushed:
-			// Streaming: send headers and start SetBodyStreamWriter.
-			ctx.SetStatusCode(w.status())
-
-			haveContentType := false
-			for k, vv := range w.Header() {
-				// No Content-Length when streaming.
-				if k == fasthttp.HeaderContentLength {
-					continue
-				}
-				if k == fasthttp.HeaderContentType {
-					haveContentType = true
-				}
-				for _, v := range vv {
-					ctx.Response.Header.Add(k, v)
-				}
-			}
-			if !haveContentType {
-				w.mu.Lock()
-				if len(w.responseBody) > 0 {
-					l := min(len(w.responseBody), 512)
-					ctx.Response.Header.Set(fasthttp.HeaderContentType, http.DetectContentType(w.responseBody[:l]))
-				}
-				w.mu.Unlock()
-			}
-
-			ctx.SetBodyStreamWriter(func(bw *bufio.Writer) {
-				// Ensure cleanup only after the stream completes.
-				defer releaseWriter(w)
-
-				// Send pre-flush bytes.
-				if b := w.consumePreflush(); len(b) > 0 {
-					_, _ = bw.Write(b)
-					_ = bw.Flush()
-				}
-
-				// Stream subsequent writes from the pipe until EOF.
-				buf := bufferPool.Get().(*[]byte) //nolint:forcetypeassert
-				defer bufferPool.Put(buf)
-
-				for {
-					n, err := w.pr.Read(*buf)
-					if n > 0 {
-						if _, e := bw.Write((*buf)[:n]); e != nil {
-							return
-						}
-						if e := bw.Flush(); e != nil {
-							return
-						}
-					}
-					if err != nil {
-						return
-					}
-				}
-			})
-
-			// Signal the writer that streaming is ready so Flush() can return.
-			close(w.streamReady)
-
-		case modeHijacked:
-			releaseWriter(w)
-			return
-
-		case modePanicked:
-			panic("net/http handler panicked")
-		}
-	}
+	_ = "STUB: not implemented"
+	return *new(fasthttp.RequestHandler)
 }
+
+//nolint:forcetypeassert
 
 var bufferPool = sync.Pool{
 	New: func() any {
@@ -197,7 +37,6 @@ const (
 	modePanicked
 )
 
-// Writer implements http.ResponseWriter + http.Flusher + http.Hijacker for the adaptor.
 type writer struct {
 	ctx        *fasthttp.RequestCtx
 	h          http.Header
@@ -220,72 +59,19 @@ type writer struct {
 	closeOnce sync.Once
 }
 
-func acquireWriter(ctx *fasthttp.RequestCtx) *writer {
-	pr, pw := io.Pipe()
-	return &writer{
-		ctx:          ctx,
-		h:            make(http.Header),
-		responseBody: nil,
-		pr:           pr,
-		pw:           pw,
-		modeCh:       make(chan int, 1),
-		streamReady:  make(chan struct{}),
-	}
-}
+func acquireWriter(ctx *fasthttp.RequestCtx) *writer { _ = "STUB: not implemented"; return nil }
 
-func releaseWriter(w *writer) {
-	_ = w.Close()
-	if w.bufPool != nil {
-		bufferPool.Put(w.bufPool)
-		w.bufPool = nil
-	}
-}
+func releaseWriter(w *writer) { _ = "STUB: not implemented"; return }
 
-func (w *writer) Header() http.Header {
-	return w.h
-}
+func (w *writer) Header() http.Header { _ = "STUB: not implemented"; return *new(http.Header) }
 
-func (w *writer) WriteHeader(code int) {
-	// Allow the same codes as net/http.
-	if code < 100 || code > 999 {
-		panic(fmt.Sprintf("invalid WriteHeader code %v", code))
-	}
-	w.statusCode.CompareAndSwap(0, int64(code))
-}
+func (w *writer) WriteHeader(code int) { _ = "STUB: not implemented"; return }
 
-func (w *writer) Write(p []byte) (int, error) {
-	select {
-	case <-w.streamReady:
-		return w.pw.Write(p)
-	default:
-	}
+func (w *writer) Write(p []byte) (int, error) { _ = "STUB: not implemented"; return 0, nil }
 
-	w.mu.Lock()
-	select {
-	case <-w.streamReady:
-		w.mu.Unlock()
-		return w.pw.Write(p)
-	default:
-	}
-	defer w.mu.Unlock()
+//nolint:forcetypeassert
 
-	if w.responseBody == nil {
-		w.bufPool = bufferPool.Get().(*[]byte) //nolint:forcetypeassert
-		w.responseBody = (*w.bufPool)[:0]
-	}
-	w.responseBody = append(w.responseBody, p...)
-	return len(p), nil
-}
-
-func (w *writer) Flush() {
-	w.flushOnce.Do(func() {
-		select {
-		case w.modeCh <- modeFlushed:
-		default:
-		}
-	})
-	<-w.streamReady
-}
+func (w *writer) Flush() { _ = "STUB: not implemented"; return }
 
 type wrappedConn struct {
 	net.Conn
@@ -294,77 +80,15 @@ type wrappedConn struct {
 	once sync.Once
 }
 
-func (c *wrappedConn) Close() (err error) {
-	c.once.Do(func() {
-		err = c.Conn.Close()
-		c.wg.Done()
-	})
-	return err
-}
+func (c *wrappedConn) Close() (err error) { _ = "STUB: not implemented"; return nil }
 
 func (w *writer) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	if !w.hijacked.CompareAndSwap(false, true) {
-		return nil, nil, http.ErrHijacked
-	}
-
-	// Tell fasthttp not to send any HTTP response before hijacking.
-	w.ctx.HijackSetNoResponse(true)
-
-	conn := &wrappedConn{Conn: w.ctx.Conn()}
-	conn.wg.Add(1)
-	w.ctx.Hijack(func(net.Conn) {
-		conn.wg.Wait()
-	})
-
-	bufW := bufio.NewWriter(conn)
-
-	// Write any unflushed body to the hijacked connection buffer.
-	unflushedBody := w.consumePreflush()
-	if len(unflushedBody) > 0 {
-		if _, err := bufW.Write(unflushedBody); err != nil {
-			_ = conn.Close()
-			return nil, nil, err
-		}
-	}
-
-	select {
-	case w.modeCh <- modeHijacked:
-	default:
-	}
-
-	return conn, &bufio.ReadWriter{Reader: bufio.NewReader(conn), Writer: bufW}, nil
+	_ = "STUB: not implemented"
+	return *new(net.Conn), nil, nil
 }
 
-func (w *writer) Close() error {
-	w.closeOnce.Do(func() {
-		_ = w.pw.Close()
-		_ = w.pr.Close()
-	})
-	return nil
-}
+func (w *writer) Close() error { _ = "STUB: not implemented"; return nil }
 
-// status returns the effective status code (defaults to 200).
-func (w *writer) status() int {
-	code := int(w.statusCode.Load())
-	if code == 0 {
-		// No WriteHeader was called; check if ctx already has a status code set
-		// by a caller before NewFastHTTPHandler ran.
-		if ctxCode := w.ctx.Response.StatusCode(); ctxCode != 0 {
-			return ctxCode
-		}
-		return http.StatusOK
-	}
-	return code
-}
+func (w *writer) status() int { _ = "STUB: not implemented"; return 0 }
 
-// consumePreflush returns pre-flush bytes and clears the buffer.
-func (w *writer) consumePreflush() []byte {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if len(w.responseBody) == 0 {
-		return nil
-	}
-	out := w.responseBody
-	w.responseBody = nil
-	return out
-}
+func (w *writer) consumePreflush() []byte { _ = "STUB: not implemented"; return nil }

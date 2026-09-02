@@ -1,10 +1,7 @@
-// Package expvarhandler provides fasthttp-compatible request handler
-// serving expvars.
 package expvarhandler
 
 import (
 	"expvar"
-	"fmt"
 	"regexp"
 
 	"github.com/valyala/fasthttp"
@@ -17,48 +14,9 @@ var (
 	defaultRE = regexp.MustCompile(".")
 )
 
-// ExpvarHandler dumps json representation of expvars to http response.
-//
-// Expvars may be filtered by regexp provided via 'r' query argument.
-//
-// See https://pkg.go.dev/expvar for details.
-func ExpvarHandler(ctx *fasthttp.RequestCtx) {
-	expvarHandlerCalls.Add(1)
-
-	ctx.Response.Reset()
-
-	r, err := getExpvarRegexp(ctx)
-	if err != nil {
-		expvarRegexpErrors.Add(1)
-		fmt.Fprintf(ctx, "Error when obtaining expvar regexp: %v", err)
-		ctx.SetStatusCode(fasthttp.StatusBadRequest)
-		return
-	}
-
-	fmt.Fprintf(ctx, "{\n")
-	first := true
-	expvar.Do(func(kv expvar.KeyValue) {
-		if r.MatchString(kv.Key) {
-			if !first {
-				fmt.Fprintf(ctx, ",\n")
-			}
-			first = false
-			fmt.Fprintf(ctx, "\t%q: %s", kv.Key, kv.Value)
-		}
-	})
-	fmt.Fprintf(ctx, "\n}\n")
-
-	ctx.SetContentType("application/json; charset=utf-8")
-}
+func ExpvarHandler(ctx *fasthttp.RequestCtx) { _ = "STUB: not implemented"; return }
 
 func getExpvarRegexp(ctx *fasthttp.RequestCtx) (*regexp.Regexp, error) {
-	r := string(ctx.QueryArgs().Peek("r"))
-	if r == "" {
-		return defaultRE, nil
-	}
-	rr, err := regexp.Compile(r)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse r=%q: %w", r, err)
-	}
-	return rr, nil
+	_ = "STUB: not implemented"
+	return nil, nil
 }

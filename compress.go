@@ -1,8 +1,6 @@
 package fasthttp
 
 import (
-	"bytes"
-	"fmt"
 	"io"
 	"io/fs"
 	"sync"
@@ -10,171 +8,71 @@ import (
 	"github.com/klauspost/compress/flate"
 	"github.com/klauspost/compress/gzip"
 	"github.com/klauspost/compress/zlib"
-	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp/stackless"
 )
 
-// Supported compression levels.
 const (
 	CompressNoCompression      = flate.NoCompression
 	CompressBestSpeed          = flate.BestSpeed
 	CompressBestCompression    = flate.BestCompression
-	CompressDefaultCompression = 6  // flate.DefaultCompression
-	CompressHuffmanOnly        = -2 // flate.HuffmanOnly
+	CompressDefaultCompression = 6
+	CompressHuffmanOnly        = -2
 )
 
 func acquireGzipReader(r io.Reader) (*gzip.Reader, error) {
-	v := gzipReaderPool.Get()
-	if v == nil {
-		return gzip.NewReader(r)
-	}
-	zr := v.(*gzip.Reader) //nolint:forcetypeassert
-	if err := zr.Reset(r); err != nil {
-		return nil, err
-	}
-	return zr, nil
+	_ = "STUB: not implemented"
+	return nil, nil
 }
 
-func releaseGzipReader(zr *gzip.Reader) {
-	zr.Close()
-	gzipReaderPool.Put(zr)
-}
+//nolint:forcetypeassert
+
+func releaseGzipReader(zr *gzip.Reader) { _ = "STUB: not implemented"; return }
 
 var gzipReaderPool sync.Pool
 
 func acquireFlateReader(r io.Reader) (io.ReadCloser, error) {
-	v := flateReaderPool.Get()
-	if v == nil {
-		zr, err := zlib.NewReader(r)
-		if err != nil {
-			return nil, err
-		}
-		return zr, nil
-	}
-	zr := v.(io.ReadCloser) //nolint:forcetypeassert
-	if err := resetFlateReader(zr, r); err != nil {
-		return nil, err
-	}
-	return zr, nil
+	_ = "STUB: not implemented"
+	return *new(io.ReadCloser), nil
 }
 
-func releaseFlateReader(zr io.ReadCloser) {
-	zr.Close()
-	flateReaderPool.Put(zr)
-}
+//nolint:forcetypeassert
 
-func resetFlateReader(zr io.ReadCloser, r io.Reader) error {
-	zrr, ok := zr.(zlib.Resetter)
-	if !ok {
-		// sanity check. should only be called with a zlib.Reader
-		panic("BUG: zlib.Reader doesn't implement zlib.Resetter???")
-	}
-	return zrr.Reset(r, nil)
-}
+func releaseFlateReader(zr io.ReadCloser) { _ = "STUB: not implemented"; return }
+
+func resetFlateReader(zr io.ReadCloser, r io.Reader) error { _ = "STUB: not implemented"; return nil }
 
 var flateReaderPool sync.Pool
 
 func acquireStacklessGzipWriter(w io.Writer, level int) stackless.Writer {
-	nLevel := normalizeCompressLevel(level)
-	p := stacklessGzipWriterPoolMap[nLevel]
-	v := p.Get()
-	if v == nil {
-		return stackless.NewWriter(w, func(w io.Writer) stackless.Writer {
-			return acquireRealGzipWriter(w, level)
-		})
-	}
-	sw := v.(stackless.Writer) //nolint:forcetypeassert
-	sw.Reset(w)
-	return sw
+	_ = "STUB: not implemented"
+	return *new(stackless.Writer)
 }
 
-func releaseStacklessGzipWriter(sw stackless.Writer, level int) {
-	sw.Close()
-	nLevel := normalizeCompressLevel(level)
-	p := stacklessGzipWriterPoolMap[nLevel]
-	p.Put(sw)
-}
+//nolint:forcetypeassert
+
+func releaseStacklessGzipWriter(sw stackless.Writer, level int) { _ = "STUB: not implemented"; return }
 
 func acquireRealGzipWriter(w io.Writer, level int) *gzip.Writer {
-	nLevel := normalizeCompressLevel(level)
-	p := realGzipWriterPoolMap[nLevel]
-	v := p.Get()
-	if v == nil {
-		zw, err := gzip.NewWriterLevel(w, level)
-		if err != nil {
-			// gzip.NewWriterLevel only errors for invalid
-			// compression levels. Clamp it to be min or max.
-			if level < gzip.HuffmanOnly {
-				level = gzip.HuffmanOnly
-			} else {
-				level = gzip.BestCompression
-			}
-			zw, _ = gzip.NewWriterLevel(w, level)
-		}
-		return zw
-	}
-	zw := v.(*gzip.Writer) //nolint:forcetypeassert
-	zw.Reset(w)
-	return zw
+	_ = "STUB: not implemented"
+	return nil
 }
 
-func releaseRealGzipWriter(zw *gzip.Writer, level int) {
-	zw.Close()
-	nLevel := normalizeCompressLevel(level)
-	p := realGzipWriterPoolMap[nLevel]
-	p.Put(zw)
-}
+//nolint:forcetypeassert
+
+func releaseRealGzipWriter(zw *gzip.Writer, level int) { _ = "STUB: not implemented"; return }
 
 var (
 	stacklessGzipWriterPoolMap = newCompressWriterPoolMap()
 	realGzipWriterPoolMap      = newCompressWriterPoolMap()
 )
 
-// AppendGzipBytesLevel appends gzipped src to dst using the given
-// compression level and returns the resulting dst.
-//
-// Supported compression levels are:
-//
-//   - CompressNoCompression
-//   - CompressBestSpeed
-//   - CompressBestCompression
-//   - CompressDefaultCompression
-//   - CompressHuffmanOnly
-func AppendGzipBytesLevel(dst, src []byte, level int) []byte {
-	w := &byteSliceWriter{b: dst}
-	WriteGzipLevel(w, src, level) //nolint:errcheck
-	return w.b
-}
+func AppendGzipBytesLevel(dst, src []byte, level int) []byte { _ = "STUB: not implemented"; return nil }
 
-// WriteGzipLevel writes gzipped p to w using the given compression level
-// and returns the number of compressed bytes written to w.
-//
-// Supported compression levels are:
-//
-//   - CompressNoCompression
-//   - CompressBestSpeed
-//   - CompressBestCompression
-//   - CompressDefaultCompression
-//   - CompressHuffmanOnly
+//nolint:errcheck
+
 func WriteGzipLevel(w io.Writer, p []byte, level int) (int, error) {
-	switch w.(type) {
-	case *byteSliceWriter,
-		*bytes.Buffer,
-		*bytebufferpool.ByteBuffer:
-		// These writers don't block, so we can just use stacklessWriteGzip
-		ctx := &compressCtx{
-			w:     w,
-			p:     p,
-			level: level,
-		}
-		stacklessWriteGzip(ctx)
-		return len(p), nil
-	default:
-		zw := acquireStacklessGzipWriter(w, level)
-		n, err := zw.Write(p)
-		releaseStacklessGzipWriter(zw, level)
-		return n, err
-	}
+	_ = "STUB: not implemented"
+	return 0, nil
 }
 
 var (
@@ -182,106 +80,37 @@ var (
 	stacklessWriteGzipFunc func(ctx any) bool
 )
 
-func stacklessWriteGzip(ctx any) {
-	stacklessWriteGzipOnce.Do(func() {
-		stacklessWriteGzipFunc = stackless.NewFunc(nonblockingWriteGzip)
-	})
-	stacklessWriteGzipFunc(ctx)
-}
+func stacklessWriteGzip(ctx any) { _ = "STUB: not implemented"; return }
 
-func nonblockingWriteGzip(ctxv any) {
-	ctx := ctxv.(*compressCtx) //nolint:forcetypeassert
-	zw := acquireRealGzipWriter(ctx.w, ctx.level)
+func nonblockingWriteGzip(ctxv any) { _ = "STUB: not implemented"; return }
 
-	zw.Write(ctx.p) //nolint:errcheck // no way to handle this error anyway
+//nolint:forcetypeassert
 
-	releaseRealGzipWriter(zw, ctx.level)
-}
+//nolint:errcheck // no way to handle this error anyway
 
-// WriteGzip writes gzipped p to w and returns the number of compressed
-// bytes written to w.
-func WriteGzip(w io.Writer, p []byte) (int, error) {
-	return WriteGzipLevel(w, p, CompressDefaultCompression)
-}
+func WriteGzip(w io.Writer, p []byte) (int, error) { _ = "STUB: not implemented"; return 0, nil }
 
-// AppendGzipBytes appends gzipped src to dst and returns the resulting dst.
-func AppendGzipBytes(dst, src []byte) []byte {
-	return AppendGzipBytesLevel(dst, src, CompressDefaultCompression)
-}
+func AppendGzipBytes(dst, src []byte) []byte { _ = "STUB: not implemented"; return nil }
 
-// WriteGunzip writes ungzipped p to w and returns the number of uncompressed
-// bytes written to w.
-func WriteGunzip(w io.Writer, p []byte) (int, error) {
-	return writeGunzip(w, p, 0)
-}
+func WriteGunzip(w io.Writer, p []byte) (int, error) { _ = "STUB: not implemented"; return 0, nil }
 
 func writeGunzip(w io.Writer, p []byte, maxBodySize int) (int, error) {
-	r := &byteSliceReader{b: p}
-	zr, err := acquireGzipReader(r)
-	if err != nil {
-		return 0, err
-	}
-	n, err := copyZeroAllocWithLimit(w, zr, maxBodySize)
-	releaseGzipReader(zr)
-	nn := int(n)
-	if int64(nn) != n {
-		return 0, fmt.Errorf("too much data gunzipped: %d", n)
-	}
-	return nn, err
+	_ = "STUB: not implemented"
+	return 0, nil
 }
 
-// AppendGunzipBytes appends gunzipped src to dst and returns the resulting dst.
-func AppendGunzipBytes(dst, src []byte) ([]byte, error) {
-	w := &byteSliceWriter{b: dst}
-	_, err := WriteGunzip(w, src)
-	return w.b, err
-}
+func AppendGunzipBytes(dst, src []byte) ([]byte, error) { _ = "STUB: not implemented"; return nil, nil }
 
-// AppendDeflateBytesLevel appends deflated src to dst using the given
-// compression level and returns the resulting dst.
-//
-// Supported compression levels are:
-//
-//   - CompressNoCompression
-//   - CompressBestSpeed
-//   - CompressBestCompression
-//   - CompressDefaultCompression
-//   - CompressHuffmanOnly
 func AppendDeflateBytesLevel(dst, src []byte, level int) []byte {
-	w := &byteSliceWriter{b: dst}
-	WriteDeflateLevel(w, src, level) //nolint:errcheck
-	return w.b
+	_ = "STUB: not implemented"
+	return nil
 }
 
-// WriteDeflateLevel writes deflated p to w using the given compression level
-// and returns the number of compressed bytes written to w.
-//
-// Supported compression levels are:
-//
-//   - CompressNoCompression
-//   - CompressBestSpeed
-//   - CompressBestCompression
-//   - CompressDefaultCompression
-//   - CompressHuffmanOnly
+//nolint:errcheck
+
 func WriteDeflateLevel(w io.Writer, p []byte, level int) (int, error) {
-	switch w.(type) {
-	case *byteSliceWriter,
-		*bytes.Buffer,
-		*bytebufferpool.ByteBuffer:
-		// These writers don't block, so we can just use stacklessWriteDeflate
-		ctx := &compressCtx{
-			w:     w,
-			p:     p,
-			level: level,
-		}
-		stacklessWriteDeflate(ctx)
-		return len(p), nil
-	default:
-		zw := acquireStacklessDeflateWriter(w, level)
-		n, err := zw.Write(p)
-		releaseStacklessDeflateWriter(zw, level)
-		return n, err
-	}
+	_ = "STUB: not implemented"
+	return 0, nil
 }
 
 var (
@@ -289,21 +118,13 @@ var (
 	stacklessWriteDeflateFunc func(ctx any) bool
 )
 
-func stacklessWriteDeflate(ctx any) {
-	stacklessWriteDeflateOnce.Do(func() {
-		stacklessWriteDeflateFunc = stackless.NewFunc(nonblockingWriteDeflate)
-	})
-	stacklessWriteDeflateFunc(ctx)
-}
+func stacklessWriteDeflate(ctx any) { _ = "STUB: not implemented"; return }
 
-func nonblockingWriteDeflate(ctxv any) {
-	ctx := ctxv.(*compressCtx) //nolint:forcetypeassert
-	zw := acquireRealDeflateWriter(ctx.w, ctx.level)
+func nonblockingWriteDeflate(ctxv any) { _ = "STUB: not implemented"; return }
 
-	zw.Write(ctx.p) //nolint:errcheck // no way to handle this error anyway
+//nolint:forcetypeassert
 
-	releaseRealDeflateWriter(zw, ctx.level)
-}
+//nolint:errcheck // no way to handle this error anyway
 
 type compressCtx struct {
 	w     io.Writer
@@ -311,183 +132,74 @@ type compressCtx struct {
 	level int
 }
 
-// WriteDeflate writes deflated p to w and returns the number of compressed
-// bytes written to w.
-func WriteDeflate(w io.Writer, p []byte) (int, error) {
-	return WriteDeflateLevel(w, p, CompressDefaultCompression)
-}
+func WriteDeflate(w io.Writer, p []byte) (int, error) { _ = "STUB: not implemented"; return 0, nil }
 
-// AppendDeflateBytes appends deflated src to dst and returns the resulting dst.
-func AppendDeflateBytes(dst, src []byte) []byte {
-	return AppendDeflateBytesLevel(dst, src, CompressDefaultCompression)
-}
+func AppendDeflateBytes(dst, src []byte) []byte { _ = "STUB: not implemented"; return nil }
 
-// WriteInflate writes inflated p to w and returns the number of uncompressed
-// bytes written to w.
-func WriteInflate(w io.Writer, p []byte) (int, error) {
-	return writeInflate(w, p, 0)
-}
+func WriteInflate(w io.Writer, p []byte) (int, error) { _ = "STUB: not implemented"; return 0, nil }
 
 func writeInflate(w io.Writer, p []byte, maxBodySize int) (int, error) {
-	r := &byteSliceReader{b: p}
-	zr, err := acquireFlateReader(r)
-	if err != nil {
-		return 0, err
-	}
-	n, err := copyZeroAllocWithLimit(w, zr, maxBodySize)
-	releaseFlateReader(zr)
-	nn := int(n)
-	if int64(nn) != n {
-		return 0, fmt.Errorf("too much data inflated: %d", n)
-	}
-	return nn, err
+	_ = "STUB: not implemented"
+	return 0, nil
 }
 
-// AppendInflateBytes appends inflated src to dst and returns the resulting dst.
 func AppendInflateBytes(dst, src []byte) ([]byte, error) {
-	w := &byteSliceWriter{b: dst}
-	_, err := WriteInflate(w, src)
-	return w.b, err
+	_ = "STUB: not implemented"
+	return nil, nil
 }
 
 type byteSliceWriter struct {
 	b []byte
 }
 
-func (w *byteSliceWriter) Write(p []byte) (int, error) {
-	w.b = append(w.b, p...)
-	return len(p), nil
-}
+func (w *byteSliceWriter) Write(p []byte) (int, error) { _ = "STUB: not implemented"; return 0, nil }
 
 func (w *byteSliceWriter) WriteString(s string) (int, error) {
-	w.b = append(w.b, s...)
-	return len(s), nil
+	_ = "STUB: not implemented"
+	return 0, nil
 }
 
 type byteSliceReader struct {
 	b []byte
 }
 
-func (r *byteSliceReader) Read(p []byte) (int, error) {
-	if len(r.b) == 0 {
-		return 0, io.EOF
-	}
-	n := copy(p, r.b)
-	r.b = r.b[n:]
-	return n, nil
-}
+func (r *byteSliceReader) Read(p []byte) (int, error) { _ = "STUB: not implemented"; return 0, nil }
 
-func (r *byteSliceReader) ReadByte() (byte, error) {
-	if len(r.b) == 0 {
-		return 0, io.EOF
-	}
-	n := r.b[0]
-	r.b = r.b[1:]
-	return n, nil
-}
+func (r *byteSliceReader) ReadByte() (byte, error) { _ = "STUB: not implemented"; return 0, nil }
 
 func acquireStacklessDeflateWriter(w io.Writer, level int) stackless.Writer {
-	nLevel := normalizeCompressLevel(level)
-	p := stacklessDeflateWriterPoolMap[nLevel]
-	v := p.Get()
-	if v == nil {
-		return stackless.NewWriter(w, func(w io.Writer) stackless.Writer {
-			return acquireRealDeflateWriter(w, level)
-		})
-	}
-	sw := v.(stackless.Writer) //nolint:forcetypeassert
-	sw.Reset(w)
-	return sw
+	_ = "STUB: not implemented"
+	return *new(stackless.Writer)
 }
 
+//nolint:forcetypeassert
+
 func releaseStacklessDeflateWriter(sw stackless.Writer, level int) {
-	sw.Close()
-	nLevel := normalizeCompressLevel(level)
-	p := stacklessDeflateWriterPoolMap[nLevel]
-	p.Put(sw)
+	_ = "STUB: not implemented"
+	return
 }
 
 func acquireRealDeflateWriter(w io.Writer, level int) *zlib.Writer {
-	nLevel := normalizeCompressLevel(level)
-	p := realDeflateWriterPoolMap[nLevel]
-	v := p.Get()
-	if v == nil {
-		zw, err := zlib.NewWriterLevel(w, level)
-		if err != nil {
-			// zlib.NewWriterLevel only errors for invalid
-			// compression levels. Clamp it to be min or max.
-			if level < zlib.HuffmanOnly {
-				level = zlib.HuffmanOnly
-			} else {
-				level = zlib.BestCompression
-			}
-			zw, _ = zlib.NewWriterLevel(w, level)
-		}
-		return zw
-	}
-	zw := v.(*zlib.Writer) //nolint:forcetypeassert
-	zw.Reset(w)
-	return zw
+	_ = "STUB: not implemented"
+	return nil
 }
 
-func releaseRealDeflateWriter(zw *zlib.Writer, level int) {
-	zw.Close()
-	nLevel := normalizeCompressLevel(level)
-	p := realDeflateWriterPoolMap[nLevel]
-	p.Put(zw)
-}
+//nolint:forcetypeassert
+
+func releaseRealDeflateWriter(zw *zlib.Writer, level int) { _ = "STUB: not implemented"; return }
 
 var (
 	stacklessDeflateWriterPoolMap = newCompressWriterPoolMap()
 	realDeflateWriterPoolMap      = newCompressWriterPoolMap()
 )
 
-func newCompressWriterPoolMap() []*sync.Pool {
-	// Initialize pools for all the compression levels defined
-	// in https://pkg.go.dev/compress/flate#pkg-constants .
-	// Compression levels are normalized with normalizeCompressLevel,
-	// so the fit [0..11].
-	m := make([]*sync.Pool, 0, 12)
-	for range 12 {
-		m = append(m, &sync.Pool{})
-	}
-	return m
-}
+func newCompressWriterPoolMap() []*sync.Pool { _ = "STUB: not implemented"; return nil }
 
 func isFileCompressible(f fs.File, minCompressRatio float64) bool {
-	// Try compressing the first 4kb of the file
-	// and see if it can be compressed by more than
-	// the given minCompressRatio.
-	b := bytebufferpool.Get()
-	zw := acquireStacklessGzipWriter(b, CompressDefaultCompression)
-	lr := &io.LimitedReader{
-		R: f,
-		N: 4096,
-	}
-	_, err := copyZeroAlloc(zw, lr)
-	releaseStacklessGzipWriter(zw, CompressDefaultCompression)
-	seeker, ok := f.(io.Seeker)
-	if !ok {
-		return false
-	}
-	seeker.Seek(0, io.SeekStart) //nolint:errcheck
-	if err != nil {
-		return false
-	}
-
-	n := 4096 - lr.N
-	zn := len(b.B)
-	bytebufferpool.Put(b)
-	return float64(zn) < float64(n)*minCompressRatio
+	_ = "STUB: not implemented"
+	return false
 }
 
-// normalizes compression level into [0..11], so it could be used as an index
-// in *PoolMap.
-func normalizeCompressLevel(level int) int {
-	// -2 is the lowest compression level - CompressHuffmanOnly
-	// 9 is the highest compression level - CompressBestCompression
-	if level < -2 || level > 9 {
-		level = CompressDefaultCompression
-	}
-	return level + 2
-}
+//nolint:errcheck
+
+func normalizeCompressLevel(level int) int { _ = "STUB: not implemented"; return 0 }

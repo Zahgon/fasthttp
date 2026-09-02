@@ -1,7 +1,6 @@
 package reuseport
 
 import (
-	"context"
 	"net"
 	"syscall"
 
@@ -19,7 +18,7 @@ var listenConfig = net.ListenConfig{
 	},
 }
 
-// Listen returns a TCP listener with the SO_REUSEADDR and SO_REUSEPORT options set.
 func Listen(network, addr string) (net.Listener, error) {
-	return listenConfig.Listen(context.Background(), network, addr)
+	_ = "STUB: not implemented"
+	return *new(net.Listener), nil
 }

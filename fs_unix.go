@@ -2,6 +2,4 @@
 
 package fasthttp
 
-func hasWindowsReservedPathColon(_ []byte, _ bool) bool {
-	return false
-}
+func hasWindowsReservedPathColon(_ []byte, _ bool) bool { _ = "STUB: not implemented"; return false }
