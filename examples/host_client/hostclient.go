@@ -8,20 +8,20 @@ import (
 )
 
 func main() {
-	// Get URI from a pool
+
 	url := fasthttp.AcquireURI()
 	url.Parse(nil, []byte("http://localhost:8080/")) //nolint:errcheck
 	url.SetUsername("Aladdin")
 	url.SetPassword("Open Sesame")
 
 	hc := &fasthttp.HostClient{
-		Addr:                "localhost:8080", // The host address and port must be set explicitly
-		MaxResponseBodySize: 10 * 1024 * 1024, // Reject responses larger than 10 MiB.
+		Addr:                "localhost:8080",
+		MaxResponseBodySize: 10 * 1024 * 1024,
 	}
 
 	req := fasthttp.AcquireRequest()
-	req.SetURI(url)          // copy url into request
-	fasthttp.ReleaseURI(url) // now you may release the URI
+	req.SetURI(url)
+	fasthttp.ReleaseURI(url)
 
 	req.Header.SetMethod(fasthttp.MethodGet)
 	resp := fasthttp.AcquireResponse()

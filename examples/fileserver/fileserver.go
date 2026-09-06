@@ -1,7 +1,3 @@
-// Example static file server.
-//
-// Serves static files from the given directory.
-// Exports various stats at /stats .
 package main
 
 import (
@@ -26,10 +22,9 @@ var (
 )
 
 func main() {
-	// Parse command-line flags.
+
 	flag.Parse()
 
-	// Setup FS handler
 	fs := &fasthttp.FS{
 		Root:               *dir,
 		IndexNames:         []string{"index.html"},
@@ -42,12 +37,6 @@ func main() {
 	}
 	fsHandler := fs.NewRequestHandler()
 
-	// Create RequestHandler serving server stats on /stats and files
-	// on other requested paths.
-	// /stats output may be filtered using regexps. For example:
-	//
-	//   * /stats?r=fs will show only stats (expvars) containing 'fs'
-	//     in their names.
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
 		switch string(ctx.Path()) {
 		case "/stats":
@@ -58,7 +47,6 @@ func main() {
 		}
 	}
 
-	// Start HTTP server.
 	if *addr != "" {
 		log.Printf("Starting HTTP server on %q", *addr)
 		go func() {
@@ -68,7 +56,6 @@ func main() {
 		}()
 	}
 
-	// Start HTTPS server.
 	if *addrTLS != "" {
 		log.Printf("Starting HTTPS server on %q", *addrTLS)
 		go func() {
@@ -81,40 +68,18 @@ func main() {
 	log.Printf("Serving files from directory %q", *dir)
 	log.Printf("See stats at http://%s/stats", *addr)
 
-	// Wait forever.
 	select {}
 }
 
-func updateFSCounters(ctx *fasthttp.RequestCtx) {
-	// Increment the number of fsHandler calls.
-	fsCalls.Add(1)
+func updateFSCounters(ctx *fasthttp.RequestCtx) { _ = "STUB: not implemented"; return }
 
-	// Update other stats counters
-	resp := &ctx.Response
-	switch resp.StatusCode() {
-	case fasthttp.StatusOK:
-		fsOKResponses.Add(1)
-		fsResponseBodyBytes.Add(int64(resp.Header.ContentLength()))
-	case fasthttp.StatusNotModified:
-		fsNotModifiedResponses.Add(1)
-	case fasthttp.StatusNotFound:
-		fsNotFoundResponses.Add(1)
-	default:
-		fsOtherResponses.Add(1)
-	}
-}
-
-// Various counters - see https://pkg.go.dev/expvar for details.
 var (
-	// Counter for total number of fs calls.
 	fsCalls = expvar.NewInt("fsCalls")
 
-	// Counters for various response status codes.
 	fsOKResponses          = expvar.NewInt("fsOKResponses")
 	fsNotModifiedResponses = expvar.NewInt("fsNotModifiedResponses")
 	fsNotFoundResponses    = expvar.NewInt("fsNotFoundResponses")
 	fsOtherResponses       = expvar.NewInt("fsOtherResponses")
 
-	// Total size in bytes for OK response bodies served.
 	fsResponseBodyBytes = expvar.NewInt("fsResponseBodyBytes")
 )

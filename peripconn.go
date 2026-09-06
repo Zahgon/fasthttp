@@ -13,31 +13,9 @@ type perIPConnCounter struct {
 	lock             sync.Mutex
 }
 
-func (cc *perIPConnCounter) Register(ip uint32) int {
-	cc.lock.Lock()
-	if cc.m == nil {
-		cc.m = make(map[uint32]int)
-	}
-	n := cc.m[ip] + 1
-	cc.m[ip] = n
-	cc.lock.Unlock()
-	return n
-}
+func (cc *perIPConnCounter) Register(ip uint32) int { _ = "STUB: not implemented"; return 0 }
 
-func (cc *perIPConnCounter) Unregister(ip uint32) {
-	cc.lock.Lock()
-	defer cc.lock.Unlock()
-	if cc.m == nil {
-		// developer safeguard
-		panic("BUG: perIPConnCounter.Register() wasn't called")
-	}
-	// Drop the entry, otherwise the map keeps a key per distinct client IP forever.
-	if n := cc.m[ip] - 1; n > 0 {
-		cc.m[ip] = n
-	} else {
-		delete(cc.m, ip)
-	}
-}
+func (cc *perIPConnCounter) Unregister(ip uint32) { _ = "STUB: not implemented"; return }
 
 type perIPConn struct {
 	net.Conn
@@ -58,81 +36,18 @@ type perIPTLSConn struct {
 }
 
 func acquirePerIPConn(conn net.Conn, ip uint32, counter *perIPConnCounter) net.Conn {
-	if tlsConn, ok := conn.(*tls.Conn); ok {
-		v := counter.perIPTLSConnPool.Get()
-		if v == nil {
-			return &perIPTLSConn{
-				perIPConnCounter: counter,
-				Conn:             tlsConn,
-				ip:               ip,
-			}
-		}
-		c := v.(*perIPTLSConn) //nolint:forcetypeassert
-		c.Conn = tlsConn
-		c.ip = ip
-		return c
-	}
-
-	v := counter.perIPConnPool.Get()
-	if v == nil {
-		return &perIPConn{
-			perIPConnCounter: counter,
-			Conn:             conn,
-			ip:               ip,
-		}
-	}
-	c := v.(*perIPConn) //nolint:forcetypeassert
-	c.Conn = conn
-	c.ip = ip
-	return c
+	_ = "STUB: not implemented"
+	return *new(net.Conn)
 }
 
-func (c *perIPConn) Close() error {
-	c.lock.Lock()
-	cc := c.Conn
-	c.Conn = nil
-	c.lock.Unlock()
+//nolint:forcetypeassert
 
-	if cc == nil {
-		return nil
-	}
+//nolint:forcetypeassert
 
-	err := cc.Close()
-	c.perIPConnCounter.Unregister(c.ip)
-	c.perIPConnCounter.perIPConnPool.Put(c)
-	return err
-}
+func (c *perIPConn) Close() error { _ = "STUB: not implemented"; return nil }
 
-func (c *perIPTLSConn) Close() error {
-	c.lock.Lock()
-	cc := c.Conn
-	c.Conn = nil
-	c.lock.Unlock()
+func (c *perIPTLSConn) Close() error { _ = "STUB: not implemented"; return nil }
 
-	if cc == nil {
-		return nil
-	}
+func getUint32IP(c net.Conn) uint32 { _ = "STUB: not implemented"; return 0 }
 
-	err := cc.Close()
-	c.perIPConnCounter.Unregister(c.ip)
-	c.perIPConnCounter.perIPTLSConnPool.Put(c)
-	return err
-}
-
-func getUint32IP(c net.Conn) uint32 {
-	ip := getConnIP4(c)
-
-	if len(ip) != 4 {
-		return 0
-	}
-	return uint32(ip[0])<<24 | uint32(ip[1])<<16 | uint32(ip[2])<<8 | uint32(ip[3])
-}
-
-func getConnIP4(c net.Conn) net.IP {
-	addr := c.RemoteAddr()
-	ipAddr, ok := addr.(*net.TCPAddr)
-	if !ok {
-		return net.IPv4zero
-	}
-	return ipAddr.IP.To4()
-}
+func getConnIP4(c net.Conn) net.IP { _ = "STUB: not implemented"; return *new(net.IP) }
